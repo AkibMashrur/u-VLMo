@@ -1,0 +1,1 @@
+python3 run.py --task "coco_captioning_single" --dist "1" --output_dir "output/coco_captioning" --evaluate --checkpoint "checkpoints/coco_capt_ft_epoch_4.th" --generate

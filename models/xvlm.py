@@ -361,7 +361,7 @@ class XVLMBase(nn.Module):
             return F.normalize(self.vision_proj(image_embeds[:, 0, :]), dim=-1)
         else:
             return F.normalize(self.vision_proj(image_embeds[:, 0, :]), dim=-1), \
-                   F.normalize(self.text_proj(text_embeds[:, 0, :]), dim=-1)
+                F.normalize(self.text_proj(text_embeds[:, 0, :]), dim=-1)
 
     def get_contrastive_loss(self, image_feat, text_feat, idx=None):
         """
@@ -445,7 +445,7 @@ class XVLMBase(nn.Module):
         image_atts_all = torch.cat([image_atts_neg, image_atts], dim=0)
 
         cross_pos = self.get_cross_embeds(image_embeds, image_atts, text_embeds=text_embeds, text_atts=text_atts)[:, 0,
-                    :]
+                                                                                                                  :]
         cross_neg = self.get_cross_embeds(image_embeds_all, image_atts_all, text_embeds=text_embeds_all,
                                           text_atts=text_atts_all)[:, 0, :]
 

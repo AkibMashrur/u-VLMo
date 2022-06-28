@@ -16,7 +16,7 @@ class XVLM(XVLMBase):  # for domain pretrain
                          use_contrastive_loss=False, use_matching_loss=False, use_mlm_loss=False, use_bbox_loss=False, config_text=None)
 
         assert config['text_encoder'] == 'data/bert-base-uncased'
-        self.tokenizer = BertTokenizer.from_pretrained('data/bert-base-uncased')
+        self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
         self.tokenizer.add_special_tokens({'bos_token': self.tokenizer.cls_token, 'eos_token': self.tokenizer.sep_token})
 
         self.prompt = config['prompt']
@@ -106,20 +106,20 @@ class XVLM(XVLMBase):  # for domain pretrain
             # greedy generation from OSCAR
             assert (num_beams == 1) and (num_return_sequences == 1)
             outputs, logprobs = self.text_decoder._generate_no_beam_search(input_ids=input_ids, cur_len=input_ids.shape[1], max_length=max_length,
-                                          do_sample=False, temperature=1,
-                                          top_k=0, top_p=1, repetition_penalty=repetition_penalty,
-                                          pad_token_id=self.tokenizer.pad_token_id, eos_token_ids=[self.tokenizer.sep_token_id],
-                                          batch_size=image_embeds.size(0), **model_kwargs)
+                                                                           do_sample=False, temperature=1,
+                                                                           top_k=0, top_p=1, repetition_penalty=repetition_penalty,
+                                                                           pad_token_id=self.tokenizer.pad_token_id, eos_token_ids=[self.tokenizer.sep_token_id],
+                                                                           batch_size=image_embeds.size(0), **model_kwargs)
 
             return _get_captions(outputs)
 
         elif sample:
             # sampling from OSCAR
             outputs, logprobs = self.text_decoder._generate_no_beam_search(input_ids=input_ids, cur_len=input_ids.shape[1], max_length=max_length,
-                                          do_sample=True, temperature=1,
-                                          top_k=0, top_p=1, repetition_penalty=repetition_penalty,
-                                          pad_token_id=self.tokenizer.pad_token_id, eos_token_ids=[self.tokenizer.sep_token_id],
-                                          batch_size=image_embeds.size(0), **model_kwargs)
+                                                                           do_sample=True, temperature=1,
+                                                                           top_k=0, top_p=1, repetition_penalty=repetition_penalty,
+                                                                           pad_token_id=self.tokenizer.pad_token_id, eos_token_ids=[self.tokenizer.sep_token_id],
+                                                                           batch_size=image_embeds.size(0), **model_kwargs)
 
             # outputs: (bs x num_return_sequences, max_length)
             # logprobs: (bs x num_return_sequences,)
