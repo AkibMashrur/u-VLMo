@@ -2,7 +2,8 @@ import copy
 import torch
 import torch.nn.functional as F
 
-from transformers import BertTokenizer
+
+from transformers import BertTokenizer, DistilBertTokenizerFast
 
 from models.xbert import BertLMHeadModel
 from models.xroberta import RobertaForCausalLM
@@ -16,7 +17,7 @@ class XVLM(XVLMBase):  # for domain pretrain
                          use_contrastive_loss=False, use_matching_loss=False, use_mlm_loss=False, use_bbox_loss=False, config_text=None)
 
         assert config['text_encoder'] == 'data/bert-base-uncased'
-        self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+        self.tokenizer = DistilBertTokenizerFast.from_pretrained('bert-base-uncased')
         self.tokenizer.add_special_tokens({'bos_token': self.tokenizer.cls_token, 'eos_token': self.tokenizer.sep_token})
 
         self.prompt = config['prompt']
@@ -45,10 +46,10 @@ class XVLM(XVLMBase):  # for domain pretrain
                         state_dict[decoder_key] = state_dict[key]
                         del state_dict[key]
 
-        msg = self.load_state_dict(state_dict, strict=False)
-        print('load checkpoint from %s' % ckpt_rpath)
-        print("missing_keys: ", [p for p in msg.missing_keys if 'vision_encoder' not in p])
-        print("unexpected_keys: ", msg.unexpected_keys)
+        self.load_state_dict(state_dict, strict=False)
+        # print('load checkpoint from %s' % ckpt_rpath)
+        # print("missing_keys: ", [p for p in msg.missing_keys if 'vision_encoder' not in p])
+        # print("unexpected_keys: ", msg.unexpected_keys)
 
     def forward(self, image, caption):
         image_embeds = self.vision_encoder(image)

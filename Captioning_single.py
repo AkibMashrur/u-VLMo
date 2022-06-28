@@ -64,7 +64,8 @@ def prepare_image(args, config):
     # im_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     # image = image.resize([config['image_res'], config['image_res']], Image.BICUBIC)
     # image = torch.from_numpy(image).float() / 255.
-    normalize = transforms.Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711))
+    normalize = transforms.Normalize((0.48145466, 0.4578275, 0.40821073),
+                                     (0.26862954, 0.26130258, 0.27577711))
     test_transform = transforms.Compose([
         transforms.Resize((config['image_res'], config['image_res']), interpolation=Image.BICUBIC),
         transforms.ToTensor(),
