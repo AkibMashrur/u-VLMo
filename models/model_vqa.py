@@ -87,23 +87,23 @@ class XVLM(XVLMBase):
                     state_dict[decoder_key] = state_dict[key]
                     del state_dict[key]
 
-        msg = self.load_state_dict(state_dict, strict=False)
-        print('load checkpoint from %s' % ckpt_rpath)
-        print("missing_keys: ", [p for p in msg.missing_keys if 'vision_encoder' not in p])
-        print("unexpected_keys: ", msg.unexpected_keys)
+        self.load_state_dict(state_dict, strict=False)
+        # print('load checkpoint from %s' % ckpt_rpath)
+        # print("missing_keys: ", [p for p in msg.missing_keys if 'vision_encoder' not in p])
+        # print("unexpected_keys: ", msg.unexpected_keys)
 
-    def forward(self, image, quesiton, answer=None, k=None, weights=None, train=True):
+    def forward(self, image, question, answer=None, k=None, weights=None, train=True):
         image_embeds = self.vision_encoder(image)
         image_atts = torch.ones(image_embeds.size()[:-1], dtype=torch.long).to(image.device)
-        
-        if train:               
+
+        if train:
             '''
             k: number of answers for each question
             weights: weight for each answer
-            '''          
+            '''
             answer_targets = answer.input_ids.masked_fill(answer.input_ids == self.pad_token_id, -100)
 
-            question_output = self.text_encoder(quesiton.input_ids,
+            question_output = self.text_encoder(question.input_ids,
                                                 attention_mask=quesiton.attention_mask,
                                                 encoder_hidden_states=image_embeds,
                                                 encoder_attention_mask=image_atts,
@@ -113,7 +113,7 @@ class XVLM(XVLMBase):
             question_atts = []
             for b, n in enumerate(k):
                 question_states += [question_output.last_hidden_state[b]] * n
-                question_atts += [quesiton.attention_mask[b]] * n
+                question_atts += [question.attention_mask[b]] * n
             question_states = torch.stack(question_states, 0)
             question_atts = torch.stack(question_atts, 0)
 
@@ -126,19 +126,19 @@ class XVLM(XVLMBase):
                                               reduction='none',
                                               )
 
-            loss = weights * answer_output.loss         
-            loss = loss.sum()/image.size(0)
+            loss = weights * answer_output.loss
+            loss = loss.sum() / image.size(0)
 
             return loss
-            
+
         else:
-            question_output = self.text_encoder(quesiton.input_ids,
-                                                attention_mask=quesiton.attention_mask,
+            question_output = self.text_encoder(question.input_ids,
+                                                attention_mask=question.attention_mask,
                                                 encoder_hidden_states=image_embeds,
                                                 encoder_attention_mask=image_atts,
                                                 return_dict=True)
-            topk_ids, topk_probs = self.rank_answer(question_output.last_hidden_state, quesiton.attention_mask, 
-                                                    answer.input_ids, answer.attention_mask, k) 
+            topk_ids, topk_probs = self.rank_answer(question_output.last_hidden_state, question.attention_mask,
+                                                    answer.input_ids, answer.attention_mask, k)
             return topk_ids, topk_probs
 
     def rank_answer(self, question_states, question_atts, answer_ids, answer_atts, k):
@@ -153,13 +153,13 @@ class XVLM(XVLMBase):
                                          reduction='none')
         logits = start_output.logits[:, 0, :]  # first token's logit
 
-        # topk_probs: top-k probability 
-        # topk_ids: [num_question, k]        
+        # topk_probs: top-k probability
+        # topk_ids: [num_question, k]
         answer_first_token = answer_ids[:, 1]
         prob_first_token = F.softmax(logits, dim=1).index_select(dim=1, index=answer_first_token)
         topk_probs, topk_ids = prob_first_token.topk(k, dim=1)
 
-        # answer input: [num_question*k, answer_len]                 
+        # answer input: [num_question*k, answer_len]
         input_ids = []
         input_atts = []
         for b, topk_id in enumerate(topk_ids):
@@ -196,7 +196,7 @@ class XVLM(XVLMBase):
         topk_probs = F.softmax(log_probs_sum, dim=-1)
         # get top-k after re-ranking
         topk_probs, rerank_id = topk_probs.topk(k, dim=1)
-        topk_ids = torch.gather(topk_ids, 1, rerank_id)    
+        topk_ids = torch.gather(topk_ids, 1, rerank_id)
 
         return topk_ids, topk_probs
 

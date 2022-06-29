@@ -2,7 +2,7 @@ import json
 import os
 import time
 from collections import defaultdict, deque, OrderedDict
-
+import re
 import datetime
 
 import numpy as np
@@ -76,7 +76,7 @@ class ScstRewardCriterion(torch.nn.Module):
         gts = OrderedDict()
         gt_res_ = [
             [self._wrap_sentence(gt_res[i][j]) for j in range(len(gt_res[i]))]
-                for i in range(len(gt_res))
+            for i in range(len(gt_res))
         ]
         for i in range(gen_res_size):
             gts[i] = gt_res_[gt_idx[i]]
@@ -362,3 +362,19 @@ def init_distributed_mode(args):
 def read_json(rpath):
     with open(rpath, 'r') as f:
         return json.load(f)
+
+
+def pre_question(question, max_ques_words):
+    question = re.sub(
+        r"([,.'!?\"()*#:;~])",
+        '',
+        question.lower(),
+    ).replace('-', ' ').replace('/', ' ')
+    question = question.rstrip(' ')
+
+    # truncate question
+    question_words = question.split(' ')
+    if len(question_words) > max_ques_words:
+        question = ' '.join(question_words[:max_ques_words])
+
+    return question

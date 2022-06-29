@@ -4,6 +4,7 @@ from streamlit_cropper import st_cropper
 from PIL import Image
 
 import caption_image
+import answer_question
 
 st.set_option('deprecation.showfileUploaderEncoding', False)
 
@@ -26,6 +27,15 @@ if img_file:
         with st.spinner('Waking up Eva...'):
             caption = caption_image.caption_api(cropped_img)
         st.write(f"Eva: Hi there! Isn't that {caption[0]}?")
+        question = st.text_input("Ask Eva a question based on what she sees.")
+
+    st.write("## Ask a question")
+    question = st.text_input("Ask the model a question based on the thumbnail")
+    if st.button("Ask a question"):
+        with st.spinner('Asking Eva...'):
+            answer = answer_question.answer_api(cropped_img, question)
+        st.write(f"I think the answer is {answer}")
         # question = st.text_input("Ask Eva a question based on what she sees.")
+
         # if st.button('Ask'):
         #     st.write("Hello there.")

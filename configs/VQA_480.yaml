@@ -3,7 +3,7 @@ train_file: ['data/finetune/vqa_train.json',
              'data/finetune/vg_qa.json']
              
 test_file: ['data/finetune/vqa_test.json']
-answer_list: 'data/finetune/answer_list.json'
+answer_list: 'vocabs/answer_list.json'
 
 vqa_root: 'images/coco/'
 vg_root: 'images/visualgenome/'
