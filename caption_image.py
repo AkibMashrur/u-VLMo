@@ -1,4 +1,5 @@
 """Handler for captioning image from a specified path."""
+import streamlit as st
 import argparse
 import ruamel.yaml as yaml
 import torch
@@ -39,6 +40,7 @@ def generate(model, image, device, config):
 
 def prepare_image(image, config) -> torch.Tensor:
     """Prepare image for captioning."""
+    image = image.convert('RGB')
     normalize = transforms.Normalize((0.48145466, 0.4578275, 0.40821073),
                                      (0.26862954, 0.26130258, 0.27577711))
     transform = transforms.Compose([
@@ -52,6 +54,7 @@ def prepare_image(image, config) -> torch.Tensor:
     return image
 
 
+# @st.cache
 def load_model(model_path, config) -> torch.nn.Module:
     """Load model from specified checkpoint."""
     model = XVLM(config=config)
@@ -77,6 +80,21 @@ def captioning_handler():
 
     caption = generate(model, image, device, config)
     print(caption)
+
+
+def caption_api(image):
+    """Caption image from app."""
+    args = parse_args()
+    config = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    image = prepare_image(image, config)
+    image = image.to(device)
+    model = load_model(args.model_path, config)
+    if torch.cuda.is_available():
+        model = nn.DataParallel(model)
+    model = model.to(device)
+    caption = generate(model, image, device, config)
+    return caption
 
 
 if __name__ == "__main__":

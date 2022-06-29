@@ -1,3 +1,3 @@
-from models.xvlm import XVLMBase
-from models.xvlm import build_mlp
-from models.xvlm import load_pretrained
+from .xvlm import XVLMBase
+from .xvlm import build_mlp
+from .xvlm import load_pretrained

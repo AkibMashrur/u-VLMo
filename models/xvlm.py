@@ -11,7 +11,7 @@ import torch.distributed as dist
 
 from functools import partial
 
-from models import box_ops
+# import models.box_ops
 
 from models.vit import VisionTransformer, interpolate_pos_embed
 from models.clip_vit import CLIPVisionTransformer
