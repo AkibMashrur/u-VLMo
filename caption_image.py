@@ -1,5 +1,4 @@
 """Handler for captioning image from a specified path."""
-import streamlit as st
 import argparse
 import ruamel.yaml as yaml
 import torch

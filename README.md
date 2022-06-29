@@ -7,7 +7,7 @@
     - vision encoder: SWIN Transformer. (Suitable for object detection)
     - text encoder + decoder: BERT
 - Supports inference on GPU if available.
-- Pretrained checkpoints (Credits to X-VLM authors for open sourcing the models):
+- Pretrained checkpoints (**Credits to XVLM authors for open sourcing the models**):
   - Captioning: ```coco_capt_ft_epoch_4.th``` [[Download](https://drive.google.com/drive/folders/15Ymsay477QKo3PWOt9cwjWpiII5RQaH8)]
   - VQA: ```model_state_epoch_9.th``` [[Download](https://drive.google.com/drive/folders/1tRKlCVMvkRquad7kMp4JVEbaKG-Ho8To)]
 
@@ -31,3 +31,6 @@ streamlit run app.py
 ```
 
 - Streamlit typically starts the local app server on localhost:8501.
+
+## Acknowledgement
+The core model related codes and configurations are forked from the [github repo](https://github.com/zengyan-97/X-VLM) of original XVLM authors.
