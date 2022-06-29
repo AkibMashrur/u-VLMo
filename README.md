@@ -1,5 +1,8 @@
 # Towards uncertainty-aware vision language models. (u-VLMo)
 
+## Interface
+Here is the sample interface for the app:
+![uVLM Interface](interface.png)
 ## Features
 - **Quantifies uncertainty of outputs from vision language models.**
 - Uses multi-grained vision language model for inference. ([Multi-Grained Vision Language Pre-Training: Aligning Texts with Visual Concepts](https://arxiv.org/abs/2111.08276). Yan Zeng, Xinsong Zhang, Hang Li. arXiv 2021.)
@@ -10,7 +13,6 @@
 - Pretrained checkpoints (**Credits to XVLM authors for open sourcing the models**):
   - Captioning: ```coco_capt_ft_epoch_4.th``` [[Download](https://drive.google.com/drive/folders/15Ymsay477QKo3PWOt9cwjWpiII5RQaH8)]
   - VQA: ```model_state_epoch_9.th``` [[Download](https://drive.google.com/drive/folders/1tRKlCVMvkRquad7kMp4JVEbaKG-Ho8To)]
-
 
 
 Please read the code for more details. 

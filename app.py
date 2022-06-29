@@ -1,4 +1,5 @@
 """Interface for the uncertainty-aware vision-language model."""
+from requests import session
 import streamlit as st
 from streamlit_cropper import st_cropper
 from PIL import Image
@@ -6,36 +7,46 @@ from PIL import Image
 import caption_image
 import answer_question
 
+from streamlit_chat import message
+
 st.set_option('deprecation.showfileUploaderEncoding', False)
+
+st.set_page_config(
+    page_title="u-VLM",
+    page_icon=":robot:"
+)
 
 # Upload an image and set some options for demo purposes
 st.header("Uncertainty-aware Vision language model")
-st.write("Please upload an image to start the demo.")
-img_file = st.sidebar.file_uploader(label='Upload an image', type=['png', 'jpg', 'jpeg'])
 
-if img_file:
-    img = Image.open(img_file)
-    # Get a cropped image from the frontend
-    cropped_img = st_cropper(img, realtime_update=True, box_color='#0000FF',
-                             aspect_ratio=None)
+# if 'cropped' not in st.session_state:
+if "caption" not in st.session_state:
+    st.write("Please upload an image to start the demo.")
+    # img_file = st.sidebar.file_uploader(label='Upload an image', type=['png', 'jpg', 'jpeg'])
+    if img_file:
+        st.session_state.image = img_file
+        img = Image.open(st.session_state.image)
+        cropped_img = st_cropper(img, realtime_update=True, box_color='#0000FF',
+                                 aspect_ratio=None)
+        _ = cropped_img.thumbnail((224, 224))
+        st.image(cropped_img)
+        caption_btn = st.button("Wake up Eva")
+        if caption_btn:
+            st.session_state.cropped = cropped_img
+            with st.spinner('Waking up Eva...'):
+                caption = caption_image.caption_api(st.session_state.cropped)
+            st.session_state.caption = f"Hi there, I can see a {caption[0]}."
+            message(st.session_state.caption)
+            answer_btn = st.button("Ask Eva a question")
+            if answer_btn:
+                st.spinner("Loading QA interface.")
 
-    # Preview cropped image
-    st.write("### Preview")
-    _ = cropped_img.thumbnail((224, 224))
-    st.image(cropped_img)
-    if st.button("Start conversation"):
-        with st.spinner('Waking up Eva...'):
-            caption = caption_image.caption_api(cropped_img)
-        st.write(f"Eva: Hi there! Isn't that {caption[0]}?")
-        question = st.text_input("Ask Eva a question based on what she sees.")
-
-    st.write("## Ask a question")
-    question = st.text_input("Ask the model a question based on the thumbnail")
-    if st.button("Ask a question"):
-        with st.spinner('Asking Eva...'):
-            answer = answer_question.answer_api(cropped_img, question)
-        st.write(f"I think the answer is {answer}")
-        # question = st.text_input("Ask Eva a question based on what she sees.")
-
-        # if st.button('Ask'):
-        #     st.write("Hello there.")
+else:
+    st.image(st.session_state.cropped)
+    message(st.session_state.caption)
+    question = st.text_input("Ask Eva a question based on what she sees.")
+    if question:
+        message(question, is_user=True)
+        with st.spinner('Asking eva...'):
+            answer = answer_question.answer_api(st.session_state.cropped, question)
+        message(answer[0]["answer"])
