@@ -22,7 +22,7 @@ st.header("Uncertainty-aware Vision language model")
 # if 'cropped' not in st.session_state:
 if "caption" not in st.session_state:
     st.write("Please upload an image to start the demo.")
-    # img_file = st.sidebar.file_uploader(label='Upload an image', type=['png', 'jpg', 'jpeg'])
+    img_file = st.sidebar.file_uploader(label='Upload an image', type=['png', 'jpg', 'jpeg'])
     if img_file:
         st.session_state.image = img_file
         img = Image.open(st.session_state.image)
