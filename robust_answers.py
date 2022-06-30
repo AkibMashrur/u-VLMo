@@ -142,7 +142,7 @@ def answer_api(image, question):
     image = Image.open(args.image_path).convert('RGB')
     image = prepare_image(image, config)
     image = image.repeat(n_repeats, 1, 1, 1)
-    image = image + .1 * torch.normal(0, 1, size=image.shape)
+    image = image + .2 * torch.normal(0, 1, size=image.shape)
     image = image.to(device)
 
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')

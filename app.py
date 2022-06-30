@@ -41,7 +41,7 @@ if "answer" not in st.session_state and "question" in st.session_state and "capt
     message(st.session_state.caption, key="1")
     message(st.session_state.question, is_user=True)
     with st.spinner('Asking the model...'):
-        # answer = answer_question.answer_api(st.session_state.image, st.session_state.question)
+        simple_answer = answer_question.answer_api(st.session_state.image, st.session_state.question)
         uncertainty, all_answers = robust_answers.answer_api(st.session_state.image, st.session_state.question)
 
     conf_threshold = 0.9
@@ -56,3 +56,11 @@ if "answer" not in st.session_state and "question" in st.session_state and "capt
     fig = plt.figure(figsize=(10, 10))
     sns.violinplot(data=all_answers, x="Predictions", y="Probabilities", scale="width")
     st.pyplot(fig)
+
+    st.sidebar.write("Technical comparison:")
+    baseline_conf = simple_answer[0]['probability'] / 100.
+    robust_conf = math.floor(conf * 1e4) / 1e4
+    delta = robust_conf - baseline_conf
+
+    st.sidebar.metric(label="Baseline Confidence", value=baseline_conf)
+    st.sidebar.metric(label="Robust Confidence", value=robust_conf, delta=delta)

@@ -37,7 +37,7 @@ def answer_question(model, image, question, tokenizer, device, config):
     question_input = tokenizer(question, padding='longest', return_tensors="pt").to(device)
 
     with torch.no_grad():
-        topk_ids, topk_probs = model(image=image, question=question_input, answer=answer_input, train=False, k=config['k_test'])
+        topk_ids, topk_probs, _ = model(image=image, question=question_input, answer=answer_input, train=False, k=config['k_test'])
 
     result = []
     for topk_id, topk_prob in zip(topk_ids, topk_probs):
