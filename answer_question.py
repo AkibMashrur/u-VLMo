@@ -1,11 +1,13 @@
 """Handler for answering question from a specified image."""
 import argparse
 import ruamel.yaml as yaml
-import torch
-import torch.nn as nn
-from PIL import Image
 import json
 
+import math
+import torch
+import torch.nn as nn
+
+from PIL import Image
 from torchvision import transforms
 
 from models.model_vqa import XVLM
@@ -39,8 +41,9 @@ def answer_question(model, image, question, tokenizer, device, config):
 
     result = []
     for topk_id, topk_prob in zip(topk_ids, topk_probs):
-        _, pred = topk_prob.max(dim=0)
-        result.append({"answer": answer_list[topk_id[pred]]})
+        prob, pred = topk_prob.max(dim=0)
+        prob = math.floor(prob.item() * 1e4) / 100  # round down to two decimals
+        result.append({"answer": answer_list[topk_id[pred]], "probability": prob})
 
     return result
 

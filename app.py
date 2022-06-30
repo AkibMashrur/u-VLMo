@@ -9,7 +9,7 @@ import answer_question
 st.set_option('deprecation.showfileUploaderEncoding', False)
 st.set_page_config(
     page_title="u-VLM",
-    page_icon=":robot:"
+    page_icon="🤖"
 )
 st.header("Uncertainty-aware Vision language model")
 
@@ -21,14 +21,14 @@ if "image" not in st.session_state:
         st.session_state.image = img
 
 if "caption" not in st.session_state and "image" in st.session_state:
-    with st.spinner('Waking up Eva...'):
+    with st.spinner('Loading model...'):
         caption = caption_image.caption_api(st.session_state.image)
-        st.session_state.caption = caption
+        st.session_state.caption = f"I see {caption[0]}"
     st.image(st.session_state.image)
     message(st.session_state.caption, key="0")
 
 if "question" not in st.session_state and "caption" in st.session_state and "image" in st.session_state:
-    question = st.text_input("Ask Eva a question based on what she sees.")
+    question = st.text_input("Ask the model a question based on what it sees.")
     if question:
         st.session_state.question = question
 
@@ -36,6 +36,9 @@ if "answer" not in st.session_state and "question" in st.session_state and "capt
     st.image(st.session_state.image)
     message(st.session_state.caption, key="1")
     message(st.session_state.question, is_user=True)
-    with st.spinner('Asking eva...'):
+    with st.spinner('Asking the model...'):
         answer = answer_question.answer_api(st.session_state.image, st.session_state.question)
-    message(answer[0]["answer"])
+    ans_class = answer[0]["answer"]
+    ans_prob = answer[0]["probability"]
+    message(f"I am {ans_prob}% sure that the answer is {ans_class}")
+    # message(answer[0]["answer"])
