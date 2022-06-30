@@ -2,9 +2,13 @@
 import streamlit as st
 from PIL import Image
 from streamlit_chat import message
+import matplotlib.pyplot as plt
+import seaborn as sns
+import math
 
 import caption_image
 import answer_question
+import robust_answers
 
 st.set_option('deprecation.showfileUploaderEncoding', False)
 st.set_page_config(
@@ -37,12 +41,18 @@ if "answer" not in st.session_state and "question" in st.session_state and "capt
     message(st.session_state.caption, key="1")
     message(st.session_state.question, is_user=True)
     with st.spinner('Asking the model...'):
-        answer = answer_question.answer_api(st.session_state.image, st.session_state.question)
-    ans_class = answer[0]["answer"]
-    ans_prob = answer[0]["probability"]
-    conf_threshold = 80
-    if ans_prob > conf_threshold:
-        message(f"I am {ans_prob}% sure that the answer is {ans_class}")
+        # answer = answer_question.answer_api(st.session_state.image, st.session_state.question)
+        uncertainty, all_answers = robust_answers.answer_api(st.session_state.image, st.session_state.question)
+
+    conf_threshold = 0.9
+    conf = uncertainty.Probabilities[0]
+    answer = uncertainty.index[0]
+    if conf > conf_threshold:
+        percentage_conf = math.floor(conf * 1e4) / 100
+        message(f"I am {percentage_conf}% confident that the answer is {answer}. These are my top 5 predictions:")
     else:
-        message("Sorry I am not quite sure.")
-    # message(answer[0]["answer"])
+        message("Sorry I am not quite sure. These are my top 5 predictions:")
+
+    fig = plt.figure(figsize=(10, 10))
+    sns.violinplot(data=all_answers, x="Predictions", y="Probabilities", scale="width")
+    st.pyplot(fig)

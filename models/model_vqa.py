@@ -137,9 +137,9 @@ class XVLM(XVLMBase):
                                                 encoder_hidden_states=image_embeds,
                                                 encoder_attention_mask=image_atts,
                                                 return_dict=True)
-            topk_ids, topk_probs = self.rank_answer(question_output.last_hidden_state, question.attention_mask,
-                                                    answer.input_ids, answer.attention_mask, k)
-            return topk_ids, topk_probs
+            topk_ids, topk_probs, topk_logits = self.rank_answer(question_output.last_hidden_state, question.attention_mask,
+                                                                 answer.input_ids, answer.attention_mask, k)
+            return topk_ids, topk_probs, topk_logits
 
     def rank_answer(self, question_states, question_atts, answer_ids, answer_atts, k):
 
@@ -194,11 +194,12 @@ class XVLM(XVLMBase):
         log_probs_sum = log_probs_sum.view(num_ques, k)
 
         topk_probs = F.softmax(log_probs_sum, dim=-1)
+        topk_logits = log_probs_sum
         # get top-k after re-ranking
         topk_probs, rerank_id = topk_probs.topk(k, dim=1)
         topk_ids = torch.gather(topk_ids, 1, rerank_id)
 
-        return topk_ids, topk_probs
+        return topk_ids, topk_probs, topk_logits
 
 
 def tile(x, dim, n_tile):
