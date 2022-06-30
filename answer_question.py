@@ -43,6 +43,7 @@ def answer_question(model, image, question, tokenizer, device, config):
     for topk_id, topk_prob in zip(topk_ids, topk_probs):
         prob, pred = topk_prob.max(dim=0)
         prob = math.floor(prob.item() * 1e4) / 100  # round down to two decimals
+
         result.append({"answer": answer_list[topk_id[pred]], "probability": prob})
 
     return result

@@ -40,5 +40,9 @@ if "answer" not in st.session_state and "question" in st.session_state and "capt
         answer = answer_question.answer_api(st.session_state.image, st.session_state.question)
     ans_class = answer[0]["answer"]
     ans_prob = answer[0]["probability"]
-    message(f"I am {ans_prob}% sure that the answer is {ans_class}")
+    conf_threshold = 80
+    if ans_prob > conf_threshold:
+        message(f"I am {ans_prob}% sure that the answer is {ans_class}")
+    else:
+        message("Sorry I am not quite sure.")
     # message(answer[0]["answer"])
