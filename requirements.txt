@@ -9,5 +9,4 @@ torchvision==0.8.2
 pycocotools
 pycocoevalcap
 streamlit==1.10.0
-streamlit_cropper==0.2.0
 streamlit_chat==0.0.2
