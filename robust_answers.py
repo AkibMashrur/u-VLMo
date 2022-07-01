@@ -47,10 +47,11 @@ def analyze_uncertainty(topk_ids, topk_logits, topk_probs, config):
     deviation_df = all_answer_df.groupby("Predictions").std(ddof=0)
     mean_df["Deviations"] = deviation_df["Probabilities"]
     answer_df = mean_df.sort_values(by=['Probabilities'], ascending=False)
-    top_5_answers = answer_df.head(5)
-    top_5_preds = top_5_answers.index
+    top_3_answers = answer_df.head(3)
+    top_3_preds = top_3_answers.index
+    # top3_mean_vars = answer_df["Deviations"].mean()
 
-    return top_5_answers, all_answer_df[all_answer_df.Predictions.isin(top_5_preds)]
+    return top_3_answers, all_answer_df[all_answer_df.Predictions.isin(top_3_preds)]
 
 
 def answer_question(model, image, question, tokenizer, device, config):
