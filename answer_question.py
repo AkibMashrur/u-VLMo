@@ -14,6 +14,7 @@ from models.model_vqa import XVLM
 from models.tokenization_bert import BertTokenizer
 
 from utils import pre_question
+import streamlit as st
 
 
 def parse_args():
@@ -49,6 +50,7 @@ def answer_question(model, image, question, tokenizer, device, config):
     return result
 
 
+@st.cache
 def prepare_image(image, config) -> torch.Tensor:
     """Prepare image for answering."""
     image = image.convert('RGB')
@@ -65,6 +67,7 @@ def prepare_image(image, config) -> torch.Tensor:
     return image
 
 
+@st.cache
 def prepare_question(question_txt):
     """Prepare question for the text encoder."""
     max_ques_words = 30
@@ -72,6 +75,7 @@ def prepare_question(question_txt):
     return question
 
 
+@st.cache
 def load_model(model_path, config) -> torch.nn.Module:
     """Load model from specified checkpoint."""
     model = XVLM(config=config)

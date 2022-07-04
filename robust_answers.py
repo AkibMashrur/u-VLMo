@@ -14,6 +14,7 @@ from models.model_vqa import XVLM
 from models.tokenization_bert import BertTokenizer
 
 from utils import pre_question
+import streamlit as st
 
 
 def parse_args():
@@ -76,6 +77,7 @@ def answer_question(model, image, question, tokenizer, device, config):
     return uncertainty, all_answers
 
 
+@st.cache
 def prepare_image(image, config) -> torch.Tensor:
     """Prepare image for answering."""
     image = image.convert('RGB')
@@ -92,6 +94,7 @@ def prepare_image(image, config) -> torch.Tensor:
     return image
 
 
+@st.cache
 def prepare_question(question_txt):
     """Prepare question for the text encoder."""
     max_ques_words = 30
@@ -99,6 +102,7 @@ def prepare_question(question_txt):
     return question
 
 
+@st.cache
 def load_model(model_path, config) -> torch.nn.Module:
     """Load model from specified checkpoint."""
     model = XVLM(config=config)
@@ -132,13 +136,13 @@ def answering_handler():
     print(answer)
 
 
+@st.cache
 def answer_api(image, question):
     """Caption image from app."""
     args = parse_args()
     n_repeats = args.n_repeats
     config = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
-    # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    device = torch.device("cpu")
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     image = Image.open(args.image_path).convert('RGB')
     image = prepare_image(image, config)
@@ -150,8 +154,6 @@ def answer_api(image, question):
     config['pad_token_id'] = tokenizer.pad_token_id
     config['eos'] = '[SEP]'
     model = load_model(args.model_path, config)
-    if device == torch.device('cuda'):
-        model = nn.DataParallel(model)
     model = model.to(device)
 
     question = prepare_question(question)
