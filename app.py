@@ -10,6 +10,7 @@ import caption_image
 import answer_question
 import robust_answers
 
+
 st.set_option('deprecation.showfileUploaderEncoding', False)
 st.set_page_config(
     page_title="u-VLM",
@@ -28,14 +29,14 @@ if "image" not in st.session_state:
         st.session_state.image = img
 
 if "caption" not in st.session_state and "image" in st.session_state:
-    with st.spinner('Loading model...'):
-        caption = caption_image.caption_api(st.session_state.image)
-        st.session_state.caption = f"I see {caption[0]}"
     with col1:
         st.image(st.session_state.image)
-        message(st.session_state.caption, key="0")
+        with st.spinner('Loading model...'):
+            caption = caption_image.caption_api(st.session_state.image)
+            st.session_state.caption = f"I see {caption[0]}"
+            message(st.session_state.caption, key="0")
 
-if "question" not in st.session_state and "caption" in st.session_state and "image" in st.session_state:
+if "answer" not in st.session_state and "caption" in st.session_state and "image" in st.session_state:
     with col2:
         question = st.text_input("Ask the model a question based on what it sees.")
         if question:
