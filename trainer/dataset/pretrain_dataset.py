@@ -3,6 +3,8 @@
 # Copyright (c) 2022, ByteDance Inc.
 # All rights reserved.
 
+from trainer.dataset.dist_dataset import DistLineReadingDataset
+from trainer.dataset.utils import pre_caption
 import json
 import copy
 import math
@@ -24,9 +26,6 @@ from PIL import Image
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 Image.MAX_IMAGE_PIXELS = None
-
-from dataset.utils import pre_caption
-from dataset.dist_dataset import DistLineReadingDataset
 
 
 class TextMaskingGenerator:
@@ -192,7 +191,7 @@ class ImageTextJsonDataset(DistLineReadingDataset):
             except Exception as e:
                 print(traceback.format_exc())
                 print('encounter broken data: %s' % e)
-                print('-'*20)
+                print('-' * 20)
                 sys.stdout.flush()
 
     def preprocess(self, text):
@@ -405,7 +404,7 @@ class RegionTextJsonDataset(ImageTextJsonDataset):
                 image_list = [image] if len(text_ids_list) else []
 
                 yield image_list, text_ids_list, text_atts_list, text_ids_masked_list, masked_pos_list, \
-                      masked_ids_list, image_atts_list, target_bbox_list, is_image_list
+                    masked_ids_list, image_atts_list, target_bbox_list, is_image_list
 
             except Exception as e:
                 print(traceback.format_exc())
@@ -415,10 +414,10 @@ class RegionTextJsonDataset(ImageTextJsonDataset):
 
     def get_image_attns(self, x, y, w, h):
         x_min = min(math.floor(x / self.patch_size), self.num_patch - 1)
-        x_max = max(x_min+1, min(math.ceil((x+w) / self.patch_size), self.num_patch))  # exclude
+        x_max = max(x_min + 1, min(math.ceil((x + w) / self.patch_size), self.num_patch))  # exclude
 
         y_min = min(math.floor(y / self.patch_size), self.num_patch - 1)
-        y_max = max(y_min+1, min(math.ceil((y+h) / self.patch_size), self.num_patch))  # exclude
+        y_max = max(y_min + 1, min(math.ceil((y + h) / self.patch_size), self.num_patch))  # exclude
 
         image_atts = [0] * (1 + self.num_patch ** 2)
         image_atts[0] = 1  # always include [CLS]
@@ -460,8 +459,8 @@ class RegionTextJsonDataset(ImageTextJsonDataset):
                 print("### warning: pad region_batch by sampling, ", len(to_pad), flush=True)
 
             except ValueError:
-                print("### warning: pad region_batch by expanding, ", batch_size-len(to_keep), flush=True)
-                to_keep = (to_keep * math.ceil(batch_size/len(to_keep)))[:batch_size]
+                print("### warning: pad region_batch by expanding, ", batch_size - len(to_keep), flush=True)
+                to_keep = (to_keep * math.ceil(batch_size / len(to_keep)))[:batch_size]
 
         images = torch.stack(sum(images, []))  # flatten
         idx_to_group_img = torch.tensor([idx_to_group_img[index] for index in to_keep], dtype=torch.long)

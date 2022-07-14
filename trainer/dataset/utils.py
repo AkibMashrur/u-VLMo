@@ -1,3 +1,5 @@
+from pycocoevalcap.eval import COCOEvalCap
+from pycocotools.coco import COCO
 import re
 import json
 import os
@@ -10,8 +12,8 @@ import utils
 from tqdm import tqdm
 
 from utils.hdfs_io import hexists, hcopy, hopen
-from vqaTools.vqaEval import VQAEval
-from refTools.evaluation.refEvaluation import RefEvaluation
+from trainer.vqaTools.vqaEval import VQAEval
+from trainer.refTools.evaluation.refEvaluation import RefEvaluation
 
 
 def pre_question(question, max_ques_words):
@@ -104,7 +106,7 @@ def collect_result(result, filename, local_wdir, hdfs_wdir, write_to_hdfs=False,
     assert isinstance(result, list)
     write_json(result, os.path.join(hdfs_wdir if write_to_hdfs else local_wdir,
                                     '%s_rank%d.json' % (filename, utils.get_rank())))
-    dist.barrier()
+    # dist.barrier()
 
     if do_not_collect:
         return None
@@ -134,7 +136,7 @@ def collect_result(result, filename, local_wdir, hdfs_wdir, write_to_hdfs=False,
                 hcopy(final_result_file, os.path.join(hdfs_wdir, '%s.json' % filename))
                 print('result file saved to %s' % os.path.join(hdfs_wdir, '%s.json' % filename))
 
-    dist.barrier()
+    # dist.barrier()
 
     return final_result_file if save_result else result
 
@@ -346,10 +348,6 @@ def computeIoU(box1, box2):
         inter = 0
     union = box1[2] * box1[3] + box2[2] * box2[3] - inter
     return float(inter) / union
-
-
-from pycocotools.coco import COCO
-from pycocoevalcap.eval import COCOEvalCap
 
 
 def coco_caption_eval(annotation_file, results_file):

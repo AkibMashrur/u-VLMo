@@ -1,3 +1,4 @@
+from trainer.dataset.utils import pre_caption
 import json
 import os
 
@@ -8,8 +9,6 @@ from PIL import ImageFile
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 Image.MAX_IMAGE_PIXELS = None
-
-from dataset.utils import pre_caption
 
 
 class re_train_dataset(Dataset):

@@ -4,15 +4,15 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from PIL import Image
 
-from dataset.re_dataset import re_train_dataset, re_eval_dataset
-from dataset.pretrain_dataset import ImageTextJsonDataset, RegionTextJsonDataset
-from dataset.nlvr_dataset import nlvr_dataset
-from dataset.vqa_dataset import vqa_dataset
-from dataset.grounding_dataset import grounding_dataset, grounding_dataset_bbox
-from dataset.coco_karpathy_dataset import coco_karpathy_train, coco_karpathy_train_scst, coco_karpathy_caption_eval
+from trainer.dataset.re_dataset import re_train_dataset, re_eval_dataset
+from trainer.dataset.pretrain_dataset import ImageTextJsonDataset, RegionTextJsonDataset
+# from trainer.dataset.nlvr_dataset import nlvr_dataset
+from trainer.dataset.vqa_dataset import vqa_dataset
+# from trainer.dataset.grounding_dataset import grounding_dataset, grounding_dataset_bbox
+# from trainer.dataset.coco_karpathy_dataset import coco_karpathy_train, coco_karpathy_train_scst, coco_karpathy_caption_eval
 
 
-from dataset.randaugment import RandomAugment
+from trainer.dataset.randaugment import RandomAugment
 
 
 def create_dataset(dataset, config, evaluate=False):
@@ -66,8 +66,8 @@ def create_dataset(dataset, config, evaluate=False):
                                                transform=pretrain_transform)
 
         region_dataset = RegionTextJsonDataset(config, config['train_file_regions'], rank=int(os.environ.get('RANK') or 0),
-                                                world_size=int(os.environ.get('WORLD_SIZE') or 1), shuffle=True, repeat=True,
-                                                transform=pretrain_transform, box_transform=box_transform)
+                                               world_size=int(os.environ.get('WORLD_SIZE') or 1), shuffle=True, repeat=True,
+                                               transform=pretrain_transform, box_transform=box_transform)
 
         return general_dataset, region_dataset
 
@@ -125,8 +125,8 @@ def create_dataset(dataset, config, evaluate=False):
 
     elif dataset == 'grounding_bbox_pretrain':
         region_dataset = RegionTextJsonDataset(config, config['train_file_regions'], rank=int(os.environ.get('RANK') or 0),
-                                                world_size=int(os.environ.get('WORLD_SIZE') or 1), shuffle=True, repeat=True,
-                                                transform=pretrain_transform, box_transform=box_transform)
+                                               world_size=int(os.environ.get('WORLD_SIZE') or 1), shuffle=True, repeat=True,
+                                               transform=pretrain_transform, box_transform=box_transform)
 
         return region_dataset
 
@@ -158,7 +158,7 @@ def create_dataset(dataset, config, evaluate=False):
 
     elif dataset == 'caption_coco_scst':
         train_dataset = coco_karpathy_train_scst(train_transform, config['image_root'], config['train_file'],
-                                            prompt=config['prompt'], max_words=config['max_tokens'])
+                                                 prompt=config['prompt'], max_words=config['max_tokens'])
         val_dataset = coco_karpathy_caption_eval(test_transform, config['image_root'], config['val_file'], 'val')
         test_dataset = coco_karpathy_caption_eval(test_transform, config['image_root'], config['test_file'], 'test')
 
@@ -173,7 +173,7 @@ def vqa_collate_fn(batch):
     for image, question, answer, weights in batch:
         image_list.append(image)
         question_list.append(question)
-        weight_list += weights       
+        weight_list += weights
         answer_list += answer
         n.append(len(answer))
     return torch.stack(image_list, dim=0), question_list, answer_list, torch.Tensor(weight_list), n

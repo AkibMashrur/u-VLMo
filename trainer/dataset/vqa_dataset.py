@@ -5,7 +5,7 @@ from random import random as rand
 
 from PIL import Image
 from torch.utils.data import Dataset
-from dataset.utils import pre_question
+from trainer.dataset.utils import pre_question
 
 from torchvision.transforms.functional import hflip
 
@@ -29,7 +29,7 @@ class vqa_dataset(Dataset):
         self.max_ques_words = max_ques_words
 
         tokenizer = RobertaTokenizer.from_pretrained(text_encoder) if use_roberta else \
-            BertTokenizer.from_pretrained(text_encoder)
+            BertTokenizer.from_pretrained('bert-base-uncased')
 
         self.pad_token_id = tokenizer.pad_token_id
         self.eos_token = '</s>' if use_roberta else '[SEP]'
@@ -37,7 +37,7 @@ class vqa_dataset(Dataset):
         if split == 'test':
             self.max_ques_words = 50  # do not limit question length during test
             self.answer_list = json.load(open(answer_list, 'r'))
-        
+
     def __len__(self):
         return len(self.ann)
 

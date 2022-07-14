@@ -2,7 +2,7 @@ train_file: ['data/finetune/vqa_train.json',
              'data/finetune/vqa_val.json',
              'data/finetune/vg_qa.json']
              
-test_file: ['data/finetune/vqa_test.json']
+test_file: ['data/finetune/vqa_val.json']
 answer_list: 'vocabs/answer_list.json'
 
 vqa_root: 'images/coco/'
@@ -28,7 +28,7 @@ text_encoder: 'data/bert-base-uncased'  # ['data/bert-base-uncased', 'data/rober
 ## Training
 num_dec_layers: 6
 batch_size_train: 24
-batch_size_test: 32
+batch_size_test: 16
 max_tokens: 40
 k_test: 128
 

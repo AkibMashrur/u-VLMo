@@ -29,17 +29,15 @@ def parse_args():
     return args
 
 
-def analyze_uncertainty(topk_ids, topk_logits, topk_probs, config):
+def analyze_uncertainty(topk_ids, topk_probs, config):
     """Analyze uncertainty from the topk logits."""
     args = parse_args()
     answer_list = json.load(open(config['answer_list'], 'r'))
     flattened_ids = topk_ids.view(args.n_repeats * config['k_test'])
     flattend_answers = [answer_list[id] for id in flattened_ids.cpu().numpy().astype(int)]
     flattened_probs = topk_probs.view(args.n_repeats * config['k_test'])
-    flattened_logits = topk_logits.view(args.n_repeats * config['k_test'])
 
     all_answer_df = pd.DataFrame({"Predictions": flattend_answers,
-                                  "Logits": flattened_logits.cpu().numpy(),
                                   "Probabilities": flattened_probs.cpu().numpy()})
 
     # all_answer
@@ -65,7 +63,7 @@ def answer_question(model, image, question, tokenizer, device, config):
     question_input = tokenizer(question, padding='longest', return_tensors="pt").to(device)
 
     with torch.no_grad():
-        topk_ids, topk_probs, topk_logits = model(image=image, question=question_input, answer=answer_input, train=False, k=config['k_test'])
+        topk_ids, topk_probs = model(image=image, question=question_input, answer=answer_input, train=False, k=config['k_test'])
 
     # result = []
     # for topk_id, topk_prob in zip(topk_ids, topk_probs):
@@ -73,7 +71,7 @@ def answer_question(model, image, question, tokenizer, device, config):
     #     prob = math.floor(prob.item() * 1e4) / 100  # round down to two decimals
     #     result.append({"answer": answer_list[topk_id[pred]], "probability": prob})
 
-    uncertainty, all_answers = analyze_uncertainty(topk_ids, topk_logits, topk_probs, config)
+    uncertainty, all_answers = analyze_uncertainty(topk_ids, topk_probs, config)
     return uncertainty, all_answers
 
 
@@ -136,7 +134,6 @@ def answering_handler():
     print(answer)
 
 
-@st.cache
 def answer_api(image, question):
     """Caption image from app."""
     args = parse_args()
