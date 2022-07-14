@@ -8,6 +8,7 @@ from trainer.dataset.re_dataset import re_train_dataset, re_eval_dataset
 from trainer.dataset.pretrain_dataset import ImageTextJsonDataset, RegionTextJsonDataset
 # from trainer.dataset.nlvr_dataset import nlvr_dataset
 from trainer.dataset.vqa_dataset import vqa_dataset
+from trainer.dataset.vqa_fake_dataset import vqa_fake_dataset
 # from trainer.dataset.grounding_dataset import grounding_dataset, grounding_dataset_bbox
 # from trainer.dataset.coco_karpathy_dataset import coco_karpathy_train, coco_karpathy_train_scst, coco_karpathy_caption_eval
 
@@ -89,6 +90,17 @@ def create_dataset(dataset, config, evaluate=False):
 
         train_dataset = vqa_dataset(config['train_file'], train_transform_wohflip, config['vqa_root'], config['vg_root'],
                                     split='train', text_encoder=config['text_encoder'], use_roberta=config['use_roberta'])
+        return train_dataset, vqa_test_dataset
+
+    elif dataset == 'fake_vqa':
+        vqa_test_dataset = vqa_fake_dataset(config['test_file'], test_transform, config['vqa_root'], config['vg_root'],
+                                            split='test', answer_list=config['answer_list'],
+                                            text_encoder=config['text_encoder'], use_roberta=config['use_roberta'])
+        if evaluate:
+            return None, vqa_test_dataset
+
+        train_dataset = vqa_fake_dataset(config['train_file'], train_transform_wohflip, config['vqa_root'], config['vg_root'],
+                                         split='train', text_encoder=config['text_encoder'], use_roberta=config['use_roberta'])
         return train_dataset, vqa_test_dataset
 
     elif dataset == 'nlvr_pretrain':

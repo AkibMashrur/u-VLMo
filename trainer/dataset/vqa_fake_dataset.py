@@ -12,7 +12,7 @@ from torchvision.transforms.functional import hflip
 from transformers import BertTokenizer, RobertaTokenizer
 
 
-class vqa_dataset(Dataset):
+class vqa_fake_dataset(Dataset):
     def __init__(self, ann_file, transform, vqa_root, vg_root, split="train", max_ques_words=30, answer_list='',
                  text_encoder='', use_roberta=False):
 
@@ -64,6 +64,7 @@ class vqa_dataset(Dataset):
     def __getitem__(self, index):
 
         ann = self.ann[index]
+        fake_ann = self.ann[random.randint(0, len(self) - 1)]
 
         if 'dataset' in ann.keys():
             if ann['dataset'] == 'vqa':
@@ -89,8 +90,8 @@ class vqa_dataset(Dataset):
         image = self.transform(image)
 
         if self.split == 'test':
-            question = pre_question(ann['question'], self.max_ques_words)
-            question_id = ann['question_id']
+            question = pre_question(fake_ann['question'], self.max_ques_words)
+            question_id = fake_ann['question_id']
             return image_path, image, question, question_id
 
         elif self.split == 'train':
