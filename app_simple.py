@@ -2,13 +2,9 @@
 import streamlit as st
 from PIL import Image
 from streamlit_chat import message
-import matplotlib.pyplot as plt
-import seaborn as sns
 import math
-
 import caption_image
 import answer_question
-import robust_answers
 
 
 st.set_option('deprecation.showfileUploaderEncoding', False)
@@ -50,29 +46,31 @@ if "answer" not in st.session_state and "question" in st.session_state and "capt
         message(st.session_state['question'], is_user=True)
         with st.spinner('Asking the model...'):
             simple_answer = answer_question.answer_api(st.session_state['image'], st.session_state['question'])
-            uncertainty, all_answers = robust_answers.answer_api(st.session_state['image'], st.session_state['question'])
-            conf_threshold = 0.9
-            conf = uncertainty.Probabilities[0]
-            answer = uncertainty.index[0]
+            conf = simple_answer[0]['probability'] / 100.
+            answer = simple_answer[0]['answer']
+            # uncertainty, all_answers = robust_answers.answer_api(st.session_state['image'], st.session_state['question'])
+            conf_threshold = 0.7
+            # conf = uncertainty.Probabilities[0]
+            # answer = uncertainty.index[0]
             if conf > conf_threshold:
                 percentage_conf = math.floor(conf * 1e4) / 100
-                message(f"I am {percentage_conf}% confident that the answer is {answer}. These are my top 3 predictions:")
+                message(f"I am {percentage_conf}% confident that the answer is {answer}.")
             else:
-                message("Sorry I am not quite sure. These are my top 3 predictions:")
+                message("Sorry I am not quite sure.")
 
-    with col2:
-        sns.set(font_scale=2)
-        fig = plt.figure(figsize=(5, 12))
-        sns.violinplot(data=all_answers, x="Predictions", y="Probabilities", scale="width")
-        st.pyplot(fig)
+    # with col2:
+    #     sns.set(font_scale=2)
+    #     fig = plt.figure(figsize=(5, 12))
+    #     sns.violinplot(data=all_answers, x="Predictions", y="Probabilities", scale="width")
+    #     st.pyplot(fig)
 
-        st.sidebar.write("Technical comparison:")
-        baseline_conf = simple_answer[0]['probability'] / 100.
-        robust_conf = math.floor(conf * 1e4) / 1e4
-        delta = robust_conf - baseline_conf
+    #     st.sidebar.write("Technical comparison:")
+    #     baseline_conf = simple_answer[0]['probability'] / 100.
+    #     robust_conf = math.floor(conf * 1e4) / 1e4
+    #     delta = robust_conf - baseline_conf
 
-        st.sidebar.metric(label="Baseline Confidence", value=baseline_conf)
-        st.sidebar.metric(label="Robust Confidence", value=robust_conf, delta=delta)
+    #     st.sidebar.metric(label="Baseline Confidence", value=baseline_conf)
+    #     st.sidebar.metric(label="Robust Confidence", value=robust_conf, delta=delta)
 
         # refresh_btn = st.sidebar.button("Upload a new image")
         # if refresh_btn:

@@ -15,18 +15,21 @@
 # limitations under the License.
 """PyTorch BERT model. """
 
+import transformers
+from transformers.models.bert.configuration_bert import BertConfig
 import math
 import os
 import warnings
 from dataclasses import dataclass
 from typing import Optional, Tuple
-
+import numpy as np
 import torch
 from torch import Tensor, device, dtype, nn
 import torch.utils.checkpoint
 from torch import nn
 from torch.nn import CrossEntropyLoss, MSELoss
 import torch.nn.functional as F
+
 
 from transformers.activations import ACT2FN
 from transformers.file_utils import (
@@ -54,9 +57,8 @@ from transformers.modeling_utils import (
     prune_linear_layer,
 )
 from transformers.utils import logging
-from transformers.models.bert.configuration_bert import BertConfig
+logging.set_verbosity_debug()
 
-import transformers
 transformers.logging.set_verbosity_error()
 
 logger = logging.get_logger(__name__)
@@ -182,7 +184,7 @@ class BertEmbeddings(nn.Module):
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.register_buffer("position_ids", torch.arange(config.max_position_embeddings).expand((1, -1)))
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
-        
+
         self.config = config
 
     def forward(
@@ -196,15 +198,15 @@ class BertEmbeddings(nn.Module):
         seq_length = input_shape[1]
 
         if position_ids is None:
-            position_ids = self.position_ids[:, past_key_values_length : seq_length + past_key_values_length]
+            position_ids = self.position_ids[:, past_key_values_length: seq_length + past_key_values_length]
 
         if token_type_ids is None:
             token_type_ids = torch.zeros(input_shape, dtype=torch.long, device=self.position_ids.device)
 
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)
-        
-        token_type_embeddings = self.token_type_embeddings(token_type_ids)  
+
+        token_type_embeddings = self.token_type_embeddings(token_type_ids)
 
         embeddings = inputs_embeds + token_type_embeddings
         if self.position_embedding_type == "absolute":
@@ -244,17 +246,17 @@ class BertSelfAttention(nn.Module):
         if self.position_embedding_type == "relative_key" or self.position_embedding_type == "relative_key_query":
             self.max_position_embeddings = config.max_position_embeddings
             self.distance_embedding = nn.Embedding(2 * config.max_position_embeddings - 1, self.attention_head_size)
-        self.save_attention = False   
-            
+        self.save_attention = True
+
     def save_attn_gradients(self, attn_gradients):
         self.attn_gradients = attn_gradients
-        
+
     def get_attn_gradients(self):
         return self.attn_gradients
-    
+
     def save_attention_map(self, attention_map):
         self.attention_map = attention_map
-        
+
     def get_attention_map(self):
         return self.attention_map
 
@@ -330,10 +332,22 @@ class BertSelfAttention(nn.Module):
 
         # Normalize the attention scores to probabilities.
         attention_probs = nn.Softmax(dim=-1)(attention_scores)
-        
+
         if is_cross_attention and self.save_attention:
             self.save_attention_map(attention_probs)
-            attention_probs.register_hook(self.save_attn_gradients)         
+            # print(f"Num heads: {self.num_attention_heads}")
+            # print(f"Size of hidden state: {hidden_states.size()}")
+            # print(f"All heads: {self.all_head_size}")
+            # print(f"{attention_probs.size()}")
+            flattened_score = attention_probs.flatten()
+            # print(f"Flattened cross modal attention scores: {flattened_score.size()}")
+            if flattened_score.size()[0] == attention_probs.size()[1] * attention_probs.size()[3]:
+                with open("attention.npy", "wb") as f:
+                    attention_probs_ = torch.squeeze(attention_probs)
+                    np.save(f, attention_probs_.detach().cpu().numpy())
+                # print(flattened_score.detach().cpu().numpy())
+
+            # attention_probs.register_hook(self.save_attn_gradients)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -456,8 +470,8 @@ class BertLayer(nn.Module):
         self.attention = BertAttention(config)
 
         self.has_cross_attention = (layer_num >= config.fusion_layer)
-        if self.has_cross_attention:           
-            self.layer_num = layer_num                
+        if self.has_cross_attention:
+            self.layer_num = layer_num
             self.crossattention = BertAttention(config, is_cross_attention=True)
         self.intermediate = BertIntermediate(config)
         self.output = BertOutput(config)
@@ -488,19 +502,19 @@ class BertLayer(nn.Module):
 
         if self.has_cross_attention:
             assert encoder_hidden_states is not None, "encoder_hidden_states must be given for cross-attention layers"
-            
+
             if type(encoder_hidden_states) == list:
                 cross_attention_outputs = self.crossattention(
                     attention_output,
                     attention_mask,
                     head_mask,
-                    encoder_hidden_states[(self.layer_num-self.config.fusion_layer)%len(encoder_hidden_states)],
-                    encoder_attention_mask[(self.layer_num-self.config.fusion_layer)%len(encoder_hidden_states)],
+                    encoder_hidden_states[(self.layer_num - self.config.fusion_layer) % len(encoder_hidden_states)],
+                    encoder_attention_mask[(self.layer_num - self.config.fusion_layer) % len(encoder_hidden_states)],
                     output_attentions=output_attentions,
-                )    
+                )
                 attention_output = cross_attention_outputs[0]
                 outputs = outputs + cross_attention_outputs[1:-1]
-         
+
             else:
                 cross_attention_outputs = self.crossattention(
                     attention_output,
@@ -532,7 +546,7 @@ class BertEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.layer = nn.ModuleList([BertLayer(config,i) for i in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([BertLayer(config, i) for i in range(config.num_hidden_layers)])
 
     def forward(
         self,
@@ -553,16 +567,16 @@ class BertEncoder(nn.Module):
         all_cross_attentions = () if output_attentions and self.config.add_cross_attention else None
 
         next_decoder_cache = () if use_cache else None
-        
-        if mode=='text':
+
+        if mode == 'text':
             start_layer = 0
             output_layer = self.config.fusion_layer
-            
-        elif mode=='fusion':
+
+        elif mode == 'fusion':
             start_layer = self.config.fusion_layer
             output_layer = self.config.num_hidden_layers
-            
-        elif mode=='multi_modal':
+
+        elif mode == 'multi_modal':
             start_layer = 0
             output_layer = self.config.num_hidden_layers
         else:
@@ -854,13 +868,12 @@ class BertModel(BertPreTrainedModel):
         self.config = config
 
         self.embeddings = BertEmbeddings(config)
-        
+
         self.encoder = BertEncoder(config)
 
         self.pooler = BertPooler(config) if add_pooling_layer else None
 
         self.init_weights()
- 
 
     def get_input_embeddings(self):
         return self.embeddings.word_embeddings
@@ -877,7 +890,6 @@ class BertModel(BertPreTrainedModel):
             self.encoder.layer[layer].attention.prune_heads(heads)
 
     @add_start_docstrings_to_model_forward(BERT_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
-
     def get_extended_attention_mask(self, attention_mask: Tensor, input_shape: Tuple[int], device: device, is_decoder: bool) -> Tensor:
         """
         Makes broadcastable attention and causal masks so that future and masked tokens are ignored.
@@ -939,7 +951,7 @@ class BertModel(BertPreTrainedModel):
         extended_attention_mask = extended_attention_mask.to(dtype=self.dtype)  # fp16 compatibility
         extended_attention_mask = (1.0 - extended_attention_mask) * -10000.0
         return extended_attention_mask
-    
+
     def forward(
         self,
         input_ids=None,
@@ -998,9 +1010,9 @@ class BertModel(BertPreTrainedModel):
             input_shape = inputs_embeds.size()[:-1]
             batch_size, seq_length = input_shape
             device = inputs_embeds.device
-        elif encoder_embeds is not None:    
+        elif encoder_embeds is not None:
             input_shape = encoder_embeds.size()[:-1]
-            batch_size, seq_length = input_shape 
+            batch_size, seq_length = input_shape
             device = encoder_embeds.device
         else:
             raise ValueError("You have to specify either input_ids or inputs_embeds or encoder_embeds")
@@ -1015,7 +1027,7 @@ class BertModel(BertPreTrainedModel):
 
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
-        extended_attention_mask: torch.Tensor = self.get_extended_attention_mask(attention_mask, input_shape, 
+        extended_attention_mask: torch.Tensor = self.get_extended_attention_mask(attention_mask, input_shape,
                                                                                  device, is_decoder)
 
         # If a 2D or 3D attention mask is provided for the cross-attention
@@ -1026,13 +1038,13 @@ class BertModel(BertPreTrainedModel):
             else:
                 encoder_batch_size, encoder_sequence_length, _ = encoder_hidden_states.size()
             encoder_hidden_shape = (encoder_batch_size, encoder_sequence_length)
-            
+
             if type(encoder_attention_mask) == list:
                 encoder_extended_attention_mask = [self.invert_attention_mask(mask) for mask in encoder_attention_mask]
             elif encoder_attention_mask is None:
                 encoder_attention_mask = torch.ones(encoder_hidden_shape, device=device)
                 encoder_extended_attention_mask = self.invert_attention_mask(encoder_attention_mask)
-            else:    
+            else:
                 encoder_extended_attention_mask = self.invert_attention_mask(encoder_attention_mask)
         else:
             encoder_extended_attention_mask = None
@@ -1043,7 +1055,7 @@ class BertModel(BertPreTrainedModel):
         # input head_mask has shape [num_heads] or [num_hidden_layers x num_heads]
         # and head_mask is converted to shape [num_hidden_layers x batch x num_heads x seq_length x seq_length]
         head_mask = self.get_head_mask(head_mask, self.config.num_hidden_layers)
-        
+
         if encoder_embeds is None:
             embedding_output = self.embeddings(
                 input_ids=input_ids,
@@ -1054,7 +1066,7 @@ class BertModel(BertPreTrainedModel):
             )
         else:
             embedding_output = encoder_embeds
-            
+
         encoder_outputs = self.encoder(
             embedding_output,
             attention_mask=extended_attention_mask,
@@ -1186,6 +1198,7 @@ class LabelSmoothSoftmaxCEV1(nn.Module):
     '''
     This is the autograd version, you can also try the LabelSmoothSoftmaxCEV2 that uses derived gradients
     '''
+
     def __init__(self, lb_smooth=0.1, reduction='mean', ignore_index=-100):
         super(LabelSmoothSoftmaxCEV1, self).__init__()
         self.lb_smooth = lb_smooth
@@ -1264,7 +1277,7 @@ class BertLMHeadModel(BertPreTrainedModel):
         labels=None,
         past_key_values=None,
         use_cache=None,
-        output_attentions=None,
+        output_attentions=True,
         output_hidden_states=None,
         return_dict=None,
         is_decoder=True,
@@ -1325,12 +1338,12 @@ class BertLMHeadModel(BertPreTrainedModel):
             is_decoder=is_decoder,
             mode=mode,
         )
-        
+
         sequence_output = outputs[0]
         prediction_scores = self.cls(sequence_output)
-        
+
         if return_logits:
-            return prediction_scores[:, :-1, :].contiguous()  
+            return prediction_scores[:, :-1, :].contiguous()
 
         lm_loss = None
         if labels is not None:
@@ -1345,7 +1358,7 @@ class BertLMHeadModel(BertPreTrainedModel):
 
             lm_loss = loss_fct(shifted_prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
             if reduction == 'none':
-                lm_loss = lm_loss.view(prediction_scores.size(0),-1).sum(1)
+                lm_loss = lm_loss.view(prediction_scores.size(0), -1).sum(1)
 
         if not return_dict:
             output = (prediction_scores,) + outputs[2:]
@@ -1371,8 +1384,8 @@ class BertLMHeadModel(BertPreTrainedModel):
             input_ids = input_ids[:, -1:]
 
         return {
-            "input_ids": input_ids, 
-            "attention_mask": attention_mask, 
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
             "past_key_values": past,
             "encoder_hidden_states": model_kwargs.get("encoder_hidden_states", None),
             "encoder_attention_mask": model_kwargs.get("encoder_attention_mask", None),
@@ -1535,7 +1548,6 @@ class BertForMaskedLM(BertPreTrainedModel):
         self.cls.predictions.decoder = new_embeddings
 
     @add_start_docstrings_to_model_forward(BERT_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
-
     def gather_seq_out_by_pos(self, seq, pos):
         return torch.gather(seq, 1, pos.unsqueeze(2).expand(-1, -1, seq.size(-1)))
 
@@ -1578,7 +1590,7 @@ class BertForMaskedLM(BertPreTrainedModel):
             encoder_embeds=encoder_embeds,
             encoder_hidden_states=encoder_hidden_states,
             encoder_attention_mask=encoder_attention_mask,
-            output_attentions=output_attentions,
+            output_attentions=True,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
             is_decoder=is_decoder,
@@ -1586,6 +1598,9 @@ class BertForMaskedLM(BertPreTrainedModel):
         )
 
         sequence_output = outputs[0]
+        # print(mode)
+        print("Bert output:")
+        print(outputs[1])
 
         if masked_pos is not None:
             # sequence_output, (bs, len, 768)
@@ -1594,7 +1609,7 @@ class BertForMaskedLM(BertPreTrainedModel):
             # sequence_output, (bs, n_mask, 768)
 
         prediction_scores = self.cls(sequence_output)
-        
+
         if return_logits:
             return prediction_scores
 
@@ -1739,7 +1754,6 @@ class BertForSequenceClassification(BertPreTrainedModel):
         self.init_weights()
 
     @add_start_docstrings_to_model_forward(BERT_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
-
     def forward(
         self,
         input_ids=None,
@@ -1818,7 +1832,6 @@ class BertForMultipleChoice(BertPreTrainedModel):
         self.init_weights()
 
     @add_start_docstrings_to_model_forward(BERT_INPUTS_DOCSTRING.format("batch_size, num_choices, sequence_length"))
-
     def forward(
         self,
         input_ids=None,
@@ -1908,7 +1921,6 @@ class BertForTokenClassification(BertPreTrainedModel):
         self.init_weights()
 
     @add_start_docstrings_to_model_forward(BERT_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
-
     def forward(
         self,
         input_ids=None,
@@ -1993,7 +2005,6 @@ class BertForQuestionAnswering(BertPreTrainedModel):
         self.init_weights()
 
     @add_start_docstrings_to_model_forward(BERT_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
-
     def forward(
         self,
         input_ids=None,

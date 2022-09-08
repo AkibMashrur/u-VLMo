@@ -1,5 +1,6 @@
 """Handler for answering question from a specified image."""
 import argparse
+from asyncore import read
 import ruamel.yaml as yaml
 import json
 
@@ -22,10 +23,17 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_path', default='checkpoints/model_state_epoch_9.th')
     parser.add_argument('--config', default='configs/VQA_480.yaml')
-    parser.add_argument('--image_path', default='images/random_2.jpg')
-    parser.add_argument('--question', default='What color is the bench?')
+    parser.add_argument('--image_path', default='images/random_7.jpg')
+    parser.add_argument('--question', default='What color is the bench on the ground?')
     args = parser.parse_args()
     return args
+
+
+def read_question(q_path="question.txt"):
+    """Read question from specified path."""
+    with open(q_path, 'r') as f:
+        q = f.read()
+    return q
 
 
 def answer_question(model, image, question, tokenizer, device, config):
@@ -102,7 +110,8 @@ def answering_handler():
         model = nn.DataParallel(model)
     model = model.to(device)
 
-    question = args.question
+    # question = args.question
+    question = read_question()
     question = prepare_question(question)
 
     answer = answer_question(model, image, question, tokenizer, device, config)

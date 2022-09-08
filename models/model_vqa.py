@@ -109,6 +109,8 @@ class XVLM(XVLMBase):
                                                 encoder_attention_mask=image_atts,
                                                 return_dict=True)
 
+            print(len)
+
             question_states = []
             question_atts = []
             for b, n in enumerate(k):
@@ -137,6 +139,8 @@ class XVLM(XVLMBase):
                                                 encoder_hidden_states=image_embeds,
                                                 encoder_attention_mask=image_atts,
                                                 return_dict=True)
+            print(f"Decoding starts here. Length of question output:")
+            print(len(question_output))
             topk_ids, topk_probs = self.rank_answer(question_output.last_hidden_state, question.attention_mask,
                                                     answer.input_ids, answer.attention_mask, k)
             return topk_ids, topk_probs
@@ -173,6 +177,9 @@ class XVLM(XVLMBase):
         # repeat encoder's output for top-k answers
         question_states = tile(question_states, 0, k)
         question_atts = tile(question_atts, 0, k)
+        print("Question states and attention size after tiling:")
+        print(question_states.size())
+        print(question_atts.size())
 
         output = self.text_decoder(input_ids,
                                    attention_mask=input_atts,
